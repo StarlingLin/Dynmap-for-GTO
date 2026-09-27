@@ -1,0 +1,27 @@
+[
+  {
+    "path": "forks/dynmap",
+    "upstream": "https://github.com/webbukkit/dynmap.git",
+    "base": "36dc1adb1535081e1ee61e480e2664187e83b215",
+    "importedFromLocalCommit": "1bc7dcc03659ec0f99fbcfa96b19b82c2027f51a",
+    "importedFromLocalBranch": "gto/forge-1.20.1",
+    "historyRetained": false,
+    "retainedModules": [
+      "DynmapCore",
+      "DynmapCoreAPI",
+      "forge-1.20"
+    ]
+  },
+  {
+    "path": "forks/DynmapBlockScan",
+    "upstream": "https://github.com/webbukkit/DynmapBlockScan.git",
+    "base": "09c61a3a9dcd21d36cbf07e583a8fa7f5e87400d",
+    "importedFromLocalCommit": "4fbaaac322d88503f328f2b2fbbd5887b11e2495",
+    "importedFromLocalBranch": "gto/forge-1.20.1",
+    "historyRetained": false,
+    "retainedModules": [
+      "core",
+      "forge-1.20"
+    ]
+  }
+]

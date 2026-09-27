@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { url = 'https://maven.minecraftforge.net/' }
+    }
+}
+rootProject.name = 'Dynmap-for-GTO'
+include 'DynmapCoreAPI', 'DynmapCore', 'dynmap-forge', 'core', 'blockscan-forge', 'bundle'
+project(':DynmapCoreAPI').projectDir = file('forks/dynmap/DynmapCoreAPI')
+project(':DynmapCore').projectDir = file('forks/dynmap/DynmapCore')
+project(':dynmap-forge').projectDir = file('forks/dynmap/forge-1.20')
+project(':core').projectDir = file('forks/DynmapBlockScan/core')
+project(':blockscan-forge').projectDir = file('forks/DynmapBlockScan/forge-1.20')
+
+include 'verification'

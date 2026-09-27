@@ -1,0 +1,8 @@
+Based on Dynmap by Michael Primm and contributors (Apache-2.0),
+https://github.com/webbukkit/dynmap, tag v3.7-beta-6 (36dc1adb1535081e1ee61e480e2664187e83b215).
+Includes DynmapBlockScan by Michael Primm and contributors (upstream Forge mods.toml declares Apache Public License v2),
+https://github.com/webbukkit/DynmapBlockScan, 09c61a3a9dcd21d36cbf07e583a8fa7f5e87400d.
+
+This repository is a trimmed Forge 1.20.1 source snapshot. Upstream Git histories,
+submodule repositories, and other platform adapter projects have been removed.
+Original provenance identifiers remain as text in UPSTREAMS.json.

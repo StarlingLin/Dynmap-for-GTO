@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="Apache-2.0"
+[[mods]]
+modId="dynmap_for_gto"
+version="${version}"
+displayName="Dynmap for GTO"
+displayTest="IGNORE_SERVER_VERSION"
+description="Dynmap and BlockScan for Forge 1.20.1, with nested-mod resource and UV fixes."
+[[dependencies.dynmap_for_gto]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="SERVER"
+[[dependencies.dynmap_for_gto]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="SERVER"
+[[dependencies.dynmap_for_gto]]
+modId="dynmap"
+mandatory=true
+versionRange="[3.7-beta-6-gto.1]"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.dynmap_for_gto]]
+modId="dynmapblockscan"
+mandatory=true
+versionRange="[3.6-gto.1]"
+ordering="AFTER"
+side="SERVER"

@@ -1,0 +1,13 @@
+dependencies {
+    testImplementation project(':DynmapCore')
+    testImplementation project(':DynmapCoreAPI')
+    testImplementation files(project(':dynmap-forge').sourceSets.main.output)
+    testImplementation files(project(':blockscan-forge').sourceSets.main.output)
+    testImplementation 'net.minecraftforge:JarJarFileSystems:0.3.19'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+}
+test {
+    useJUnitPlatform()
+    testLogging { events 'passed', 'skipped', 'failed' }
+}

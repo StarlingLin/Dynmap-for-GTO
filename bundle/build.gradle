@@ -1,0 +1,75 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.util.zip.ZipFile
+
+version = '0.1.0'
+dependencies { compileOnly 'net.minecraftforge:javafmllanguage:1.20.1-47.4.20' }
+processResources { filesMatching('META-INF/mods.toml') { expand(version: project.version) } }
+def components = [
+    [project: ':dynmap-forge', artifact: 'dynmap-gto', file: 'dynmap-gto.jar'],
+    [project: ':blockscan-forge', artifact: 'dynmapblockscan-gto', file: 'dynmapblockscan-gto.jar']
+]
+def metadata = layout.buildDirectory.file('generated/jarjar/META-INF/jarjar/metadata.json')
+tasks.register('jarJarMetadata') {
+    inputs.property('versions', components.collect { project(it.project).version.toString() })
+    outputs.file(metadata)
+    doLast {
+        def jars = components.collect { c ->
+            def v = project(c.project).version.toString()
+            [identifier: [group: 'local.gto.dynmap', artifact: c.artifact],
+             version: [range: '[' + v + ']', artifactVersion: v],
+             path: 'META-INF/jarjar/' + c.file, isObfuscated: true]
+        }
+        metadata.get().asFile.parentFile.mkdirs()
+        metadata.get().asFile.text = JsonOutput.prettyPrint(JsonOutput.toJson([jars: jars]))
+    }
+}
+tasks.named('jar') {
+    dependsOn 'jarJarMetadata', ':dynmap-forge:reobfShadowJar', ':blockscan-forge:reobfShadowJar'
+    archiveFileName = "Dynmap-for-GTO-${project.version}-forge-1.20.1.jar"
+    destinationDirectory = rootProject.layout.buildDirectory.dir('libs')
+    manifest { attributes('FMLModType': 'MOD', 'Implementation-Version': project.version) }
+    from(layout.buildDirectory.dir('generated/jarjar'))
+    from(rootProject.file('LICENSE'))
+    from(rootProject.file('NOTICE'))
+    components.each { c ->
+        from({ project(c.project).tasks.named('shadowJar').get().archiveFile.get().asFile }) {
+            into 'META-INF/jarjar'
+            rename { c.file }
+        }
+    }
+}
+tasks.register('verifyBundle') {
+    dependsOn 'jar'
+    doLast {
+        new ZipFile(tasks.jar.archiveFile.get().asFile).withCloseable { z ->
+            def data = new JsonSlurper().parse(z.getInputStream(z.getEntry('META-INF/jarjar/metadata.json')))
+            assert data.jars.size() == 2
+            assert z.getEntry('local/gto/dynmap/DynmapForGTO.class') != null
+            data.jars.each { c ->
+                assert z.getEntry(c.path) != null
+                assert c.version.range == '[' + c.version.artifactVersion + ']'
+                def entries = [:]
+                new java.util.zip.ZipInputStream(z.getInputStream(z.getEntry(c.path))).withCloseable { nested ->
+                    java.util.zip.ZipEntry entry
+                    while ((entry = nested.nextEntry) != null) {
+                        if (entry.name == 'META-INF/mods.toml') entries[entry.name] = nested.readAllBytes()
+                        else entries[entry.name] = null
+                    }
+                }
+                assert new String(entries['META-INF/mods.toml'], 'UTF-8').contains('version="' + c.version.artifactVersion + '"')
+                def scan = c.identifier.artifact == 'dynmapblockscan-gto'
+                def pkg = scan ? 'org/dynmapblockscan/forge_1_20/' : 'org/dynmap/forge_1_20/'
+                assert entries.containsKey(pkg + 'NestedJarAccess.class')
+                assert entries.containsKey(pkg + (scan ? 'DynmapBlockScanMod.class' : 'DynmapMod.class'))
+                if (scan) {
+                    assert entries.keySet().any { it.startsWith('assets/') } : 'Scanner model assets missing'
+                } else {
+                    assert entries.containsKey('extracted/web/index.html') : 'Dynmap web UI missing'
+                    assert entries.keySet().any { it.startsWith('texturepacks/standard/') } : 'Dynmap standard textures missing'
+                }
+            }
+        }
+        logger.lifecycle('Bundle verified: two nested component JARs and matching version ranges.')
+    }
+}
