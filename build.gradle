@@ -2,10 +2,10 @@ plugins {
     id 'base'
     id 'io.github.goooler.shadow' version '8.1.7' apply false
 }
-ext.globals = [buildNumber: 'gto1']
+ext.globals = [buildNumber: 'gto2']
 allprojects {
     group = 'local.gto.dynmap'
-    version = '0.1.0'
+    version = '0.1.1'
     repositories {
         mavenCentral()
         maven { url = 'https://maven.minecraftforge.net/' }
@@ -17,7 +17,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
     apply plugin: 'io.github.goooler.shadow'
-    version = name in ['core', 'blockscan-forge'] ? '3.6-gto.1' : '3.7-beta-6-gto.1'
+    version = name in ['core', 'blockscan-forge'] ? '3.6-gto.2' : '3.7-beta-6-gto.2'
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
     tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

@@ -3,7 +3,7 @@
 给 GTO 用的 Dynmap，其他 Forge 1.20.1 大概也能用。
 自带 BlockScan，能渲染模组方块。
 
-对于动态生成的模型，比方说 AE 线缆，暂时不适配。
+已为部分动态模型增加服务端适配，AE 线缆等尚未支持，具体范围见下方。
 
 ## 构建
 
@@ -13,7 +13,7 @@
 .\build.ps1
 ```
 
-输出：`build/libs/Dynmap-for-GTO-0.1.0-forge-1.20.1.jar`
+输出：`build/libs/Dynmap-for-GTO-0.1.1-forge-1.20.1.jar`
 
 ## 使用
 
@@ -27,5 +27,9 @@
 
 - 修复 Dynmap 面片 UV 校验将 U 边界误用为 V 边界。
 - 修复 Dynmap 与 BlockScan 读取 Forge Jar-in-Jar 模组资源时把虚拟 Path 转成普通 File 的问题。
+- GTCEu：框架适配，机器适配，输入/输出仓适配。
+- GTMThings：无线能源监视器适配。
+- GTOCore：大型蒸汽太阳能锅炉适配。
+- ExtendedAE：扩展驱动器适配。
 
 原项目与许可证见 `NOTICE`、`LICENSE`。

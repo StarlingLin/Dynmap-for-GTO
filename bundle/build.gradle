@@ -2,7 +2,7 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import java.util.zip.ZipFile
 
-version = '0.1.0'
+version = '0.1.1'
 dependencies { compileOnly 'net.minecraftforge:javafmllanguage:1.20.1-47.4.20' }
 processResources { filesMatching('META-INF/mods.toml') { expand(version: project.version) } }
 def components = [
@@ -62,7 +62,11 @@ tasks.register('verifyBundle') {
                 def pkg = scan ? 'org/dynmapblockscan/forge_1_20/' : 'org/dynmap/forge_1_20/'
                 assert entries.containsKey(pkg + 'NestedJarAccess.class')
                 assert entries.containsKey(pkg + (scan ? 'DynmapBlockScanMod.class' : 'DynmapMod.class'))
+                assert entries.containsKey('org/dynmap/modsupport/GeneratedTextures.class') == !scan : 'Generated texture API must exist only in Dynmap'
                 if (scan) {
+                    ['gtceu/GtceuAdapter', 'gtocore/GtoCoreModels', 'gtmthings/GtmThingsModels', 'extendedae/ExtendedAeModels'].each {
+                        assert entries.containsKey(pkg + 'compat/' + it + '.class') : 'Mod adapter missing: ' + it
+                    }
                     assert entries.keySet().any { it.startsWith('assets/') } : 'Scanner model assets missing'
                 } else {
                     assert entries.containsKey('extracted/web/index.html') : 'Dynmap web UI missing'

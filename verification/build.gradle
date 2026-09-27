@@ -11,3 +11,6 @@ test {
     useJUnitPlatform()
     testLogging { events 'passed', 'skipped', 'failed' }
 }
+
+dependencies { testImplementation project(':core'); testImplementation 'com.google.code.gson:gson:2.10' }
+test { systemProperty 'gtoFixtureDir', providers.gradleProperty('gtoFixtureDir').getOrElse('') }

@@ -45,6 +45,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public class DynmapBlockScanPlugin extends AbstractBlockScanBase
 {
     public static DynmapBlockScanPlugin plugin;
+    private org.dynmapblockscan.forge_1_20.compat.ModModelAdapters adapters;
+
         
     public DynmapBlockScanPlugin(MinecraftServer srv)
     {
@@ -81,6 +83,12 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
     public void serverStarting() {
     	logger.info("buildAssetMap");
     	buildAssetMap();
+        org.dynmap.modsupport.GeneratedTextures.clear();
+        adapters = new org.dynmapblockscan.forge_1_20.compat.ModModelAdapters(path -> {
+            String[] parts = path.split("/", 4);
+            return openAssetResource(parts[1], parts[2], parts[3], false);
+        }, logger);
+
     	logger.info("loadOverrideResources");
         // Load override resources
     	loadOverrideResources();
@@ -107,6 +115,7 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
             if (b == baseb) { continue; }
             baseb = b;
             ResourceLocation rl = BuiltInRegistries.BLOCK.getKey(b);
+            if (isDisabledModule(rl.getNamespace()) || isDisabledBlockName(rl.toString())) continue;
             StateDefinition<Block, BlockState> bsc = b.getStateDefinition();
             // See if any of the block states use MODEL
             boolean uses_model = false;
@@ -134,10 +143,10 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
             	}
             }
             // Not model block - nothing else to do yet
-            if (!uses_model) {
+            if (!uses_model && !adapters.supports(b)) {
             	continue;
             }
-            else if (uses_nonmodel) {
+            else if (uses_model && uses_nonmodel) {
             	logger.warning(String.format("%s: Block mixes model and nonmodel state handling!", rl));
             }
             // Generate property value map
@@ -146,6 +155,12 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
             //Material mat = blkstate.getMaterial();
             //MaterialColor matcol = mat.getColor();
             BSBlockState blockstate = loadBlockState(rl.getNamespace(), rl.getPath(), overrides, propMap);
+            if (blockstate == null && overrides.getOverride(rl.getNamespace(), rl.getPath()) == null)
+                blockstate = adapters.blockState(b, rl.toString(), propMap);
+            if (overrides.getOverride(rl.getNamespace(), rl.getPath()) == null) {
+                BSBlockState adapted = adapters.replacementBlockState(rl.toString());
+                if (adapted != null) blockstate = adapted;
+            }
             // Build block record
             BlockRecord br = new BlockRecord();
             // Process blockstate
@@ -160,6 +175,7 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
                 	logger.verboseinfo("Exception: " + x.toString());
                 }
         	}
+            if (adapters.transparent(rl.toString())) br.lightAttenuation = 0;
         	// Build generic block state container for block
         	br.sc = new ForgeStateContainer(b, br.renderProps, propMap);
         	if (blockstate != null) {
@@ -194,10 +210,37 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
         logger.info("Elements generated");
         
         publishDynmapModData();
+        adapters.report();
+        try {
+            java.nio.file.Path report = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
+                .resolve("dynmapblockscan/gto-model-coverage.txt");
+            java.nio.file.Files.createDirectories(report.getParent());
+            java.nio.file.Files.write(report, adapters.coverage(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException error) { logger.warning("Cannot write GTO model coverage: " + error); }
+
         
         assetmap = null;
+        adapters = null; // Release scan-only JSON/image caches; shared PNGs remain available to Dynmap.
     }
         
+    @Override
+    public InputStream openAssetResource(String modid, String subpath, String resourcepath, boolean scan) {
+        if (adapters != null) {
+            InputStream generated = adapters.open("assets/" + modid + "/" + subpath + "/" + resourcepath);
+            if (generated != null) return generated;
+        }
+        return super.openAssetResource(modid, subpath, resourcepath, scan);
+    }
+
+    @Override
+    protected BlockModel loadBlockModelFile(String modid, String respath) {
+        if (adapters != null) {
+            com.google.gson.JsonObject replacement = adapters.replacementModel(modid + ":" + respath);
+            if (replacement != null) return BlockModel.buildParser().fromJson(replacement, BlockModel.class);
+        }
+        return super.loadBlockModelFile(modid, respath);
+    }
+
     @Override
     public InputStream openResource(String modid, String rname) {
         if (modid.equals("minecraft")) modid = "dynmapblockscan";   // We supply resources (1.13.2 doesn't have assets in server jar)

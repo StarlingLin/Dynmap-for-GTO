@@ -1063,6 +1063,8 @@ public class DynmapPlugin
 
         @Override
         public InputStream openResource(String modid, String rname) {
+            InputStream generated = org.dynmap.modsupport.GeneratedTextures.open(rname);
+            if (generated != null) return generated;
         	if (modid == null) modid = "minecraft";
 
         	Optional<? extends ModContainer> mc = ModList.get().getModContainerById(modid);
