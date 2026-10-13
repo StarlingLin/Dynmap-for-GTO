@@ -58,6 +58,13 @@ public class ModModelDefinitionImpl implements ModModelDefinition {
     }
 
     @Override
+    public org.dynmap.modsupport.BlockModel addCustomModel(String blockname, String renderer, java.util.Map<String,String> parameters) {
+        CustomBlockModelImpl model = new CustomBlockModelImpl(blockname, this, renderer, parameters);
+        blkModel.add(model);
+        return model;
+    }
+
+    @Override
     public boolean publishDefinition() {
         published = true;
         return true;

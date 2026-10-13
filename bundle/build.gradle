@@ -2,9 +2,17 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import java.util.zip.ZipFile
 
-version = '0.1.1'
+version = '0.1.3'
 dependencies { compileOnly 'net.minecraftforge:javafmllanguage:1.20.1-47.4.20' }
-processResources { filesMatching('META-INF/mods.toml') { expand(version: project.version) } }
+def componentVersions = providers.provider {
+    [version: project.version.toString(),
+     dynmapVersion: project(':dynmap-forge').version.toString(),
+     blockscanVersion: project(':blockscan-forge').version.toString()]
+}
+processResources {
+    inputs.properties(componentVersions.get())
+    filesMatching('META-INF/mods.toml') { expand(componentVersions.get()) }
+}
 def components = [
     [project: ':dynmap-forge', artifact: 'dynmap-gto', file: 'dynmap-gto.jar'],
     [project: ':blockscan-forge', artifact: 'dynmapblockscan-gto', file: 'dynmapblockscan-gto.jar']
@@ -46,6 +54,15 @@ tasks.register('verifyBundle') {
             def data = new JsonSlurper().parse(z.getInputStream(z.getEntry('META-INF/jarjar/metadata.json')))
             assert data.jars.size() == 2
             assert z.getEntry('local/gto/dynmap/DynmapForGTO.class') != null
+            def outerToml = z.getInputStream(z.getEntry('META-INF/mods.toml')).getText('UTF-8')
+            def dependencyRanges = [:]
+            outerToml.split(/(?m)^\[\[dependencies\.dynmap_for_gto\]\]\s*$/).drop(1).each { section ->
+                def id = section =~ /(?m)^modId\s*=\s*"([^"]+)"\s*$/
+                def range = section =~ /(?m)^versionRange\s*=\s*"([^"]+)"\s*$/
+                assert id.find() && range.find() : 'Invalid outer dependency declaration'
+                assert !dependencyRanges.containsKey(id.group(1)) : 'Duplicate outer dependency: ' + id.group(1)
+                dependencyRanges[id.group(1)] = range.group(1)
+            }
             data.jars.each { c ->
                 assert z.getEntry(c.path) != null
                 assert c.version.range == '[' + c.version.artifactVersion + ']'
@@ -57,23 +74,35 @@ tasks.register('verifyBundle') {
                         else entries[entry.name] = null
                     }
                 }
-                assert new String(entries['META-INF/mods.toml'], 'UTF-8').contains('version="' + c.version.artifactVersion + '"')
+                def declaredVersion = new String(entries['META-INF/mods.toml'], 'UTF-8')
+                assert declaredVersion.contains('version="' + c.version.artifactVersion + '"') : 'Component version mismatch: ' + c.identifier.artifact
                 def scan = c.identifier.artifact == 'dynmapblockscan-gto'
+                def modId = scan ? 'dynmapblockscan' : 'dynmap'
+                def expectedRange = '[' + c.version.artifactVersion + ']'
+                assert dependencyRanges[modId] == expectedRange : 'Outer dependency mismatch: ' + modId +
+                    ' requires ' + dependencyRanges[modId] + ', nested component is ' + c.version.artifactVersion
                 def pkg = scan ? 'org/dynmapblockscan/forge_1_20/' : 'org/dynmap/forge_1_20/'
                 assert entries.containsKey(pkg + 'NestedJarAccess.class')
                 assert entries.containsKey(pkg + (scan ? 'DynmapBlockScanMod.class' : 'DynmapMod.class'))
                 assert entries.containsKey('org/dynmap/modsupport/GeneratedTextures.class') == !scan : 'Generated texture API must exist only in Dynmap'
+                assert entries.containsKey('org/dynmap/modsupport/compat/ae2/AeCableCatalog.class') == !scan
                 if (scan) {
-                    ['gtceu/GtceuAdapter', 'gtocore/GtoCoreModels', 'gtmthings/GtmThingsModels', 'extendedae/ExtendedAeModels'].each {
+                    ['ae2/AeCableAdapter', 'gtceu/GtCableAdapter', 'gtceu/GtceuAdapter', 'gtocore/GtoCoreModels', 'gtmthings/GtmThingsModels', 'extendedae/ExtendedAeModels'].each {
                         assert entries.containsKey(pkg + 'compat/' + it + '.class') : 'Mod adapter missing: ' + it
                     }
                     assert entries.keySet().any { it.startsWith('assets/') } : 'Scanner model assets missing'
                 } else {
+                    ['gtceu/GtCableRenderer', 'ae2/AeCableRenderer'].each {
+                        assert entries.containsKey('org/dynmap/hdmap/renderer/compat/' + it + '.class')
+                    }
+                    ['gtceu/GtCableSnapshot', 'ae2/AeCableSnapshot'].each {
+                        assert entries.containsKey(pkg + 'compat/' + it + '.class')
+                    }
                     assert entries.containsKey('extracted/web/index.html') : 'Dynmap web UI missing'
                     assert entries.keySet().any { it.startsWith('texturepacks/standard/') } : 'Dynmap standard textures missing'
                 }
             }
         }
-        logger.lifecycle('Bundle verified: two nested component JARs and matching version ranges.')
+        logger.lifecycle('Bundle verified: outer dependencies, two nested component JARs, and matching version ranges.')
     }
 }

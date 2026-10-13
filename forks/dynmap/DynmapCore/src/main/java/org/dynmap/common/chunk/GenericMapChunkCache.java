@@ -507,8 +507,7 @@ public abstract class GenericMapChunkCache extends MapChunkCache {
 
 		@Override
 		public final Object getBlockTileEntityField(String fieldId) {
-			// TODO: handle tile entities here
-			return null;
+			return snap == null ? null : snap.getBlockEntityField(bx, y, bz, fieldId);
 		}
 
 		@Override
@@ -526,7 +525,12 @@ public abstract class GenericMapChunkCache extends MapChunkCache {
 
 		@Override
 		public final Object getBlockTileEntityFieldAt(String fieldId, int xoff, int yoff, int zoff) {
-			return null;
+            int nx = x + xoff, ny = y + yoff, nz = z + zoff;
+            int cx = (nx >> 4) - x_min, cz = (nz >> 4) - z_min;
+            if (cx < 0 || cx >= x_dim || cz < 0 || cz > z_max - z_min) return null;
+            int index = cx + cz * x_dim;
+            GenericChunk neighbor = snaparray[index];
+            return neighbor == null ? null : neighbor.getBlockEntityField(nx & 15, ny, nz & 15, fieldId);
 		}
 
 		@Override
@@ -1145,6 +1149,10 @@ public abstract class GenericMapChunkCache extends MapChunkCache {
 
 	private static final String litStates[] = { "light", "spawn", "heightmaps", "full" };
 	
+    protected java.util.Map<String,Object> readBlockEntityFields(GenericNBTCompound tag, String[] fields) {
+        return SnapshotFields.select(tag, fields);
+    }
+
 	public GenericChunk parseChunkFromNBT(GenericNBTCompound orignbt) {
 		GenericNBTCompound nbt = orignbt;
 		if ((nbt != null) && nbt.contains("Level", GenericNBTCompound.TAG_COMPOUND)) {
@@ -1360,7 +1368,18 @@ public abstract class GenericMapChunkCache extends MapChunkCache {
         	//Log.info(String.format("generateSky(%d,%d)", x, z));
         	bld.generateSky();
         }
-		return bld.build();
-	}
+        GenericNBTList entities = nbt.getList(nbt.contains("block_entities") ? "block_entities" : "TileEntities", GenericNBTCompound.TAG_COMPOUND);
+        if (entities.size() > 0) {
+            GenericChunk states = bld.build();
+            for (int i = 0; i < entities.size(); i++) {
+                GenericNBTCompound tag = entities.getCompound(i);
+                int ex = tag.getInt("x"), ey = tag.getInt("y"), ez = tag.getInt("z");
+                if ((ex >> 4) != x || (ez >> 4) != z || ey < dw.minY || ey >= dw.worldheight) continue;
+                String[] fields = HDBlockModels.getTileEntityFieldsNeeded(states.getBlockType(ex & 15, ey, ez & 15));
+                if (fields != null) bld.blockEntity(ex, ey, ez, readBlockEntityFields(tag, fields));
+            }
+        }
+        return bld.build();
+    }
 
 }

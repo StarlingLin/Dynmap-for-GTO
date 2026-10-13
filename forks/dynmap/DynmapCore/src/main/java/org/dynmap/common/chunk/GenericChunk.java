@@ -1,12 +1,22 @@
 package org.dynmap.common.chunk;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
 
 import org.dynmap.renderer.DynmapBlockState;
 import org.dynmap.common.BiomeMap;
 
 // Generic chunk representation
 public class GenericChunk {
+    private final Map<Long,Map<String,Object>> blockEntities;
+    public static long blockEntityKey(int x, int y, int z) { return ((long)y << 8) | ((z & 15) << 4) | (x & 15); }
+    public Object getBlockEntityField(int x, int y, int z, String field) {
+        Map<String,Object> values = blockEntities.get(blockEntityKey(x, y, z));
+        return values == null ? null : values.get(field);
+    }
+
 	public final int cx, cz;	// Chunk coord (world coord / 16)
 	public final GenericChunkSection[] sections;
 	public final int sectionCnt;
@@ -16,7 +26,8 @@ public class GenericChunk {
 	public final String chunkStatus;	// Chunk status of loaded chunk
 	public final boolean isEmpty;	// All sections are empty
 	
-	private GenericChunk(int cx, int cz, int cy_min, GenericChunkSection[] sections, long inhabTicks, int dataversion, String chunkstatus) {
+	private GenericChunk(int cx, int cz, int cy_min, GenericChunkSection[] sections, long inhabTicks, int dataversion, String chunkstatus, Map<Long,Map<String,Object>> entities) {
+        this.blockEntities = Collections.unmodifiableMap(new HashMap<Long,Map<String,Object>>(entities));
 		this.cx = cx;
 		this.cz = cz;
 		this.inhabitedTicks = inhabTicks;
@@ -80,6 +91,12 @@ public class GenericChunk {
 
     // Builder for fabricating finalized chunk
     public static class Builder {
+        private final Map<Long,Map<String,Object>> blockEntities = new HashMap<Long,Map<String,Object>>();
+        public Builder blockEntity(int x, int y, int z, Map<String,Object> values) {
+            blockEntities.put(blockEntityKey(x,y,z), Collections.unmodifiableMap(new HashMap<String,Object>(values)));
+            return this;
+        }
+
     	int x;
     	int z;
     	int y_min;
@@ -92,6 +109,7 @@ public class GenericChunk {
     		reset(world_ymin, world_ymax);
     	}
     	public void reset(int world_ymin, int world_ymax) {
+            blockEntities.clear();
     		x = 0; z = 0; 
     		y_min = world_ymin >> 4;
     		dataversion = 0;
@@ -228,7 +246,7 @@ public class GenericChunk {
     	}
     	// Build chunk
     	public GenericChunk build() {
-    		return new GenericChunk(x, z, y_min, sections, inhabTicks, dataversion, chunkstatus);
+            return new GenericChunk(x, z, y_min, sections, inhabTicks, dataversion, chunkstatus, blockEntities);
     	}
     }
 }

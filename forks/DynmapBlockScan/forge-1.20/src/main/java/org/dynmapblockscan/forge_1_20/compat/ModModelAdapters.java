@@ -23,6 +23,20 @@ public final class ModModelAdapters {
         this.baker = new ModelBaker(resources); this.logger = logger;
         ExtendedAeModels.register(baker);
     }
+    public CableDefinition cable(Block block, String id) {
+        try {
+            CableDefinition definition;
+            if (org.dynmapblockscan.forge_1_20.compat.ae2.AeCableAdapter.supports(id))
+                definition = org.dynmapblockscan.forge_1_20.compat.ae2.AeCableAdapter.bake(baker);
+            else if (org.dynmapblockscan.forge_1_20.compat.gtceu.GtCableAdapter.supports(block))
+                definition = org.dynmapblockscan.forge_1_20.compat.gtceu.GtCableAdapter.bake(baker, block);
+            else return null;
+            record(id, "cable-connected");
+            return definition;
+        } catch (ReflectiveOperationException | IOException | RuntimeException | LinkageError error) {
+            failed(id, error); return null;
+        }
+    }
     public boolean supports(Block block) { return GtceuAdapter.supports(block); }
     public boolean transparent(String id) { return transparent.contains(id); }
     private void publish(String id, JsonObject model) {

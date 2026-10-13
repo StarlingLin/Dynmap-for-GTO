@@ -25,7 +25,16 @@ import net.minecraft.world.level.chunk.storage.ChunkSerializer;
  * rendering is off server thread
  */
 public class ForgeMapChunkCache extends GenericMapChunkCache {
-	private ServerLevel w;
+    @Override
+    protected java.util.Map<String,Object> readBlockEntityFields(org.dynmap.common.chunk.GenericNBTCompound tag, String[] fields) {
+        java.util.Map<String,Object> values = new java.util.HashMap<>(super.readBlockEntityFields(tag, fields));
+        for (String field : fields) if (field.equals("dynmap_gt_connections")) {
+            Integer connections = org.dynmap.forge_1_20.compat.gtceu.GtCableSnapshot.connections(tag);
+            if (connections != null) values.put(field, connections);
+        }
+        return values;
+    }
+    private ServerLevel w;
 	private ServerChunkCache cps;
 	/**
 	 * Construct empty cache
@@ -41,7 +50,9 @@ public class ForgeMapChunkCache extends GenericMapChunkCache {
 		if (ch != null) {
 			CompoundTag nbt = ChunkSerializer.write(w, ch);
 			if (nbt != null) {
-				gc = parseChunkFromNBT(new NBT.NBTCompound(nbt));
+				if (ch instanceof net.minecraft.world.level.chunk.LevelChunk loaded)
+                    org.dynmap.forge_1_20.compat.ae2.AeCableSnapshot.capture(loaded, nbt);
+                gc = parseChunkFromNBT(new NBT.NBTCompound(nbt));
 			}
 		}
 		return gc;

@@ -116,6 +116,13 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
             baseb = b;
             ResourceLocation rl = BuiltInRegistries.BLOCK.getKey(b);
             if (isDisabledModule(rl.getNamespace()) || isDisabledBlockName(rl.toString())) continue;
+            if (overrides.getOverride(rl.getNamespace(), rl.getPath()) == null) {
+                org.dynmapblockscan.forge_1_20.compat.CableDefinition cable = adapters.cable(b, rl.toString());
+                if (cable != null) {
+                    registerCable(rl, cable);
+                    continue;
+                }
+            }
             StateDefinition<Block, BlockState> bsc = b.getStateDefinition();
             // See if any of the block states use MODEL
             boolean uses_model = false;
@@ -223,6 +230,15 @@ public class DynmapBlockScanPlugin extends AbstractBlockScanBase
         adapters = null; // Release scan-only JSON/image caches; shared PNGs remain available to Dynmap.
     }
         
+    private void registerCable(ResourceLocation id, org.dynmapblockscan.forge_1_20.compat.CableDefinition cable) {
+        ModDynmapRec definition = getModRec(id.getNamespace());
+        org.dynmap.modsupport.BlockTextureRecord textures = definition.getBlockTxtRec(id.getPath(), Collections.emptyMap());
+        textures.setTransparencyMode(org.dynmap.modsupport.TransparencyMode.TRANSPARENT);
+        for (int i = 0; i < cable.textures().size(); i++) textures.setPatchTexture(definition.registerTexture(cable.textures().get(i)), i);
+        if (definition.modDef == null) definition.modDef = definition.txtDef.getModelDefinition();
+        definition.modDef.addCustomModel(id.getPath(), cable.renderer(), cable.parameters());
+    }
+
     @Override
     public InputStream openAssetResource(String modid, String subpath, String resourcepath, boolean scan) {
         if (adapters != null) {

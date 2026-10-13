@@ -168,6 +168,8 @@ public interface ModModelDefinition {
      * @return block model record
      */
     public ModelBlockModel addModelBlockModel(String blockname);
+    /** Add a dynamic renderer for all states of this block. */
+    public BlockModel addCustomModel(String blockname, String renderer, java.util.Map<String,String> parameters);
     /**
      * Final call for model definition: publishes definiiton to Dynmap to be used for the mod
      * @return true if successful, false if error
